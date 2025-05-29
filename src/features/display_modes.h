@@ -8,7 +8,29 @@
 #ifndef _DISPLAY_MODES_H_
 #define _DISPLAY_MODES_H_
 
-#include "../../mock_sdk.h"
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+
+// Forward declarations for EPD functions (actual implementations in EPD driver)
+extern void epd_draw_pixel(uint16_t x, uint16_t y, uint16_t color);
+extern void epd_draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+extern void epd_draw_circle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color);
+extern void epd_fill_circle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color);
+extern void epd_draw_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
+extern void epd_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
+extern void epd_draw_string(uint16_t x, uint16_t y, const char* str, uint16_t color);
+extern void epd_clear_screen(uint16_t color);
+
+// Color definitions
+#define EPD_COLOR_BLACK     0x0000
+#define EPD_COLOR_WHITE     0xFFFF
+#define EPD_COLOR_RED       0xF800
+#define EPD_COLOR_GREEN     0x07E0
+#define EPD_COLOR_BLUE      0x001F
+#define EPD_COLOR_YELLOW    0xFFE0
+#define EPD_COLOR_CYAN      0x07FF
+#define EPD_COLOR_MAGENTA   0xF81F
 #include "chinese_calendar.h"
 #include "countdown.h"
 

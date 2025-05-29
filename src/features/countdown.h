@@ -8,7 +8,8 @@
 #ifndef _COUNTDOWN_H_
 #define _COUNTDOWN_H_
 
-#include "../../mock_sdk.h"
+#include <stdint.h>
+#include <string.h>
 
 /*
  * DEFINES

@@ -8,7 +8,9 @@
 #ifndef _CHINESE_CALENDAR_H_
 #define _CHINESE_CALENDAR_H_
 
-#include "../../mock_sdk.h"
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
 /*
  * DEFINES

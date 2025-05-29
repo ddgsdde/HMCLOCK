@@ -49,9 +49,7 @@
 #include "adc.h"
 
 #include "epd.h"
-#include "features/chinese_calendar.h"
-#include "features/countdown.h"
-#include "features/display_modes.h"
+#include "features/features_config.h"
 
 /*
  * GLOBAL VARIABLE DEFINITIONS
@@ -541,10 +539,10 @@ void clock_draw(int flags)
 	get_chinese_date(year, month + 1, date + 1, &display_data.chinese_date);
 
 	// 获取下一个倒数日事件
-	display_data.next_countdown = countdown_get_next_event();
+	display_data.next_countdown = countdown_get_next_event(year, month + 1, date + 1, hour, minute, 0);
 	if (display_data.next_countdown) {
 		countdown_calculate(display_data.next_countdown, 
-				  year, month + 1, date + 1, hour, minute, 
+				  year, month + 1, date + 1, hour, minute, 0,
 				  &display_data.countdown_result);
 	}
 
