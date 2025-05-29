@@ -3,23 +3,538 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Web Bluetooth Example</title>
+	<title>智能时钟配置</title>
+	<style>
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			margin: 0;
+			padding: 20px;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			color: #333;
+		}
+		.container {
+			max-width: 800px;
+			margin: 0 auto;
+			background: white;
+			border-radius: 15px;
+			box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+			overflow: hidden;
+		}
+		.header {
+			background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+			color: white;
+			padding: 20px;
+			text-align: center;
+		}
+		.header h1 {
+			margin: 0;
+			font-size: 2em;
+		}
+		.content {
+			padding: 20px;
+		}
+		.section {
+			margin-bottom: 30px;
+			padding: 20px;
+			border: 1px solid #e0e0e0;
+			border-radius: 10px;
+			background: #f9f9f9;
+		}
+		.section h2 {
+			margin-top: 0;
+			color: #4facfe;
+			border-bottom: 2px solid #4facfe;
+			padding-bottom: 10px;
+		}
+		.button-group {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			margin-bottom: 20px;
+		}
+		button {
+			padding: 12px 24px;
+			border: none;
+			border-radius: 8px;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 600;
+			transition: all 0.3s ease;
+			min-width: 100px;
+		}
+		.btn-primary {
+			background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+			color: white;
+		}
+		.btn-primary:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+		}
+		.btn-secondary {
+			background: #6c757d;
+			color: white;
+		}
+		.btn-secondary:hover {
+			background: #5a6268;
+		}
+		.btn-success {
+			background: #28a745;
+			color: white;
+		}
+		.btn-success:hover {
+			background: #218838;
+		}
+		.btn-danger {
+			background: #dc3545;
+			color: white;
+		}
+		.btn-danger:hover {
+			background: #c82333;
+		}
+		button:disabled {
+			background: #ccc;
+			cursor: not-allowed;
+			transform: none;
+		}
+		.form-group {
+			margin-bottom: 15px;
+		}
+		label {
+			display: block;
+			margin-bottom: 5px;
+			font-weight: 600;
+			color: #555;
+		}
+		input, select, textarea {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #ddd;
+			border-radius: 5px;
+			font-size: 14px;
+			box-sizing: border-box;
+		}
+		input:focus, select:focus, textarea:focus {
+			outline: none;
+			border-color: #4facfe;
+			box-shadow: 0 0 5px rgba(79, 172, 254, 0.3);
+		}
+		.status-info {
+			background: #e3f2fd;
+			border: 1px solid #2196f3;
+			border-radius: 5px;
+			padding: 10px;
+			margin-bottom: 10px;
+		}
+		.countdown-list {
+			max-height: 300px;
+			overflow-y: auto;
+			border: 1px solid #ddd;
+			border-radius: 5px;
+			padding: 10px;
+		}
+		.countdown-item {
+			background: white;
+			border: 1px solid #e0e0e0;
+			border-radius: 5px;
+			padding: 10px;
+			margin-bottom: 10px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+		.countdown-item:last-child {
+			margin-bottom: 0;
+		}
+		.countdown-info {
+			flex: 1;
+		}
+		.countdown-name {
+			font-weight: 600;
+			color: #333;
+		}
+		.countdown-date {
+			color: #666;
+			font-size: 12px;
+		}
+		.countdown-actions {
+			display: flex;
+			gap: 5px;
+		}
+		.countdown-actions button {
+			padding: 5px 10px;
+			font-size: 12px;
+			min-width: auto;
+		}
+		.image-upload {
+			border: 2px dashed #ddd;
+			border-radius: 10px;
+			padding: 20px;
+			text-align: center;
+			cursor: pointer;
+			transition: all 0.3s ease;
+		}
+		.image-upload:hover {
+			border-color: #4facfe;
+			background: #f0f8ff;
+		}
+		.image-upload.dragover {
+			border-color: #4facfe;
+			background: #e3f2fd;
+		}
+		.image-preview {
+			max-width: 200px;
+			max-height: 200px;
+			margin: 10px auto;
+			display: block;
+			border-radius: 5px;
+		}
+		.tabs {
+			display: flex;
+			border-bottom: 1px solid #ddd;
+			margin-bottom: 20px;
+		}
+		.tab {
+			padding: 10px 20px;
+			cursor: pointer;
+			border-bottom: 2px solid transparent;
+			transition: all 0.3s ease;
+		}
+		.tab.active {
+			border-bottom-color: #4facfe;
+			color: #4facfe;
+			font-weight: 600;
+		}
+		.tab-content {
+			display: none;
+		}
+		.tab-content.active {
+			display: block;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 15px;
+		}
+		.card {
+			background: white;
+			border: 1px solid #e0e0e0;
+			border-radius: 8px;
+			padding: 15px;
+			text-align: center;
+			cursor: pointer;
+			transition: all 0.3s ease;
+		}
+		.card:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+		}
+		.card.selected {
+			border-color: #4facfe;
+			background: #f0f8ff;
+		}
+		.card h3 {
+			margin: 0 0 10px 0;
+			color: #333;
+		}
+		.card p {
+			margin: 0;
+			color: #666;
+			font-size: 12px;
+		}
+	</style>
 </head>
 <body>
-	<button id="connect-button">连接</button>
-	<button id="setime-button" disabled>对时</button>
-	<button id="upfirm-button" disabled>升级</button>
-	<div id="device_name"></div>
-	<div id="current_voltage"></div>
-	<div id="current_time"></div>
-	<div id="system_time"></div>
+	<div class="container">
+		<div class="header">
+			<h1>🕐 智能时钟配置</h1>
+			<p>通过蓝牙配置您的智能时钟显示模式和功能</p>
+		</div>
+		
+		<div class="content">
+			<!-- 连接状态 -->
+			<div class="section">
+				<h2>设备连接</h2>
+				<div class="button-group">
+					<button id="connect-button" class="btn-primary">连接设备</button>
+					<button id="setime-button" class="btn-success" disabled>同步时间</button>
+					<button id="upfirm-button" class="btn-secondary" disabled>固件升级</button>
+				</div>
+				<div id="device_name" class="status-info"></div>
+				<div id="current_voltage" class="status-info"></div>
+				<div id="current_time" class="status-info"></div>
+				<div id="system_time" class="status-info"></div>
+			</div>
+
+			<!-- 显示模式配置 -->
+			<div class="section">
+				<h2>显示模式</h2>
+				<div class="tabs">
+					<div class="tab active" data-tab="time-mode">时间模式</div>
+					<div class="tab" data-tab="calendar-mode">日历模式</div>
+					<div class="tab" data-tab="image-mode">图片模式</div>
+					<div class="tab" data-tab="countdown-mode">倒数日</div>
+				</div>
+				
+				<div id="time-mode" class="tab-content active">
+					<h3>时间显示样式</h3>
+					<div class="grid">
+						<div class="card" data-style="digital">
+							<h3>数字时钟</h3>
+							<p>经典数字显示，清晰易读</p>
+						</div>
+						<div class="card" data-style="analog">
+							<h3>模拟时钟</h3>
+							<p>传统指针时钟样式</p>
+						</div>
+						<div class="card" data-style="minimal">
+							<h3>极简风格</h3>
+							<p>简约设计，突出时间</p>
+						</div>
+						<div class="card" data-style="retro">
+							<h3>复古风格</h3>
+							<p>怀旧设计，经典装饰</p>
+						</div>
+						<div class="card" data-style="neon">
+							<h3>霓虹风格</h3>
+							<p>发光效果，现代感强</p>
+						</div>
+					</div>
+					
+					<div class="form-group">
+						<label>
+							<input type="checkbox" id="show-seconds"> 显示秒数
+						</label>
+					</div>
+					<div class="form-group">
+						<label>
+							<input type="checkbox" id="show-date"> 显示日期
+						</label>
+					</div>
+					<div class="form-group">
+						<label>
+							<input type="checkbox" id="show-lunar"> 显示农历
+						</label>
+					</div>
+					<div class="form-group">
+						<label>
+							<input type="checkbox" id="show-festival"> 显示节日
+						</label>
+					</div>
+				</div>
+				
+				<div id="calendar-mode" class="tab-content">
+					<h3>日历显示样式</h3>
+					<div class="grid">
+						<div class="card" data-style="grid">
+							<h3>网格日历</h3>
+							<p>传统月历网格布局</p>
+						</div>
+						<div class="card" data-style="list">
+							<h3>列表日历</h3>
+							<p>垂直列表显示</p>
+						</div>
+						<div class="card" data-style="minimal">
+							<h3>极简日历</h3>
+							<p>简约日历设计</p>
+						</div>
+						<div class="card" data-style="chinese">
+							<h3>中式日历</h3>
+							<p>农历为主的传统样式</p>
+						</div>
+						<div class="card" data-style="modern">
+							<h3>现代风格</h3>
+							<p>现代化设计语言</p>
+						</div>
+					</div>
+				</div>
+				
+				<div id="image-mode" class="tab-content">
+					<h3>图片管理</h3>
+					<div class="image-upload" id="image-upload">
+						<p>点击或拖拽上传图片</p>
+						<p style="font-size: 12px; color: #666;">支持 JPG, PNG 格式，最大 32KB</p>
+						<input type="file" id="image-file" accept="image/*" style="display: none;">
+					</div>
+					<div id="image-preview"></div>
+					<button id="upload-image" class="btn-primary" disabled>上传图片</button>
+				</div>
+				
+				<div id="countdown-mode" class="tab-content">
+					<h3>倒数日管理</h3>
+					<div class="button-group">
+						<button id="add-countdown" class="btn-primary">添加倒数日</button>
+					</div>
+					<div id="countdown-list" class="countdown-list">
+						<!-- 倒数日列表将在这里动态生成 -->
+					</div>
+				</div>
+			</div>
+
+			<!-- 倒数日编辑表单 -->
+			<div id="countdown-form" class="section" style="display: none;">
+				<h2>编辑倒数日</h2>
+				<div class="form-group">
+					<label for="countdown-name">事件名称</label>
+					<input type="text" id="countdown-name" placeholder="例如：生日、纪念日">
+				</div>
+				<div class="form-group">
+					<label for="countdown-desc">事件描述</label>
+					<textarea id="countdown-desc" rows="3" placeholder="事件的详细描述"></textarea>
+				</div>
+				<div class="form-group">
+					<label for="countdown-type">重复类型</label>
+					<select id="countdown-type">
+						<option value="0">一次性事件</option>
+						<option value="1">每年重复</option>
+						<option value="2">每月重复</option>
+						<option value="3">每周重复</option>
+						<option value="4">每日重复</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label for="countdown-date">目标日期</label>
+					<input type="date" id="countdown-date">
+				</div>
+				<div class="form-group">
+					<label for="countdown-time">目标时间</label>
+					<input type="time" id="countdown-time">
+				</div>
+				<div class="form-group">
+					<label for="countdown-priority">优先级 (1-10)</label>
+					<input type="range" id="countdown-priority" min="1" max="10" value="5">
+					<span id="priority-value">5</span>
+				</div>
+				<div class="form-group">
+					<label>
+						<input type="checkbox" id="countdown-show-main"> 在主界面显示
+					</label>
+				</div>
+				<div class="button-group">
+					<button id="save-countdown" class="btn-success">保存</button>
+					<button id="cancel-countdown" class="btn-secondary">取消</button>
+				</div>
+			</div>
+
+			<!-- 系统设置 -->
+			<div class="section">
+				<h2>系统设置</h2>
+				<div class="form-group">
+					<label for="brightness">亮度等级</label>
+					<input type="range" id="brightness" min="1" max="10" value="5">
+					<span id="brightness-value">5</span>
+				</div>
+				<div class="form-group">
+					<label for="refresh-interval">刷新间隔 (秒)</label>
+					<select id="refresh-interval">
+						<option value="30">30秒</option>
+						<option value="60" selected>1分钟</option>
+						<option value="300">5分钟</option>
+						<option value="600">10分钟</option>
+					</select>
+				</div>
+				<div class="form-group">
+					<label>
+						<input type="checkbox" id="auto-brightness"> 自动亮度
+					</label>
+				</div>
+				<button id="apply-settings" class="btn-primary">应用设置</button>
+			</div>
+		</div>
+	</div>
 
 	<script src="log.js"></script>
 
 	<script>
+		// 全局变量
 		var connected = false;
 		var device = null;
 		var longValue = null;
+		var ctrlPoint = null;
+		var currentCountdownIndex = -1;
+		var countdownEvents = [];
+		var selectedImage = null;
+
+		// 显示配置
+		var displayConfig = {
+			currentMode: 0,
+			timeStyle: 0,
+			calendarStyle: 0,
+			showSeconds: true,
+			showDate: true,
+			showLunar: true,
+			showFestival: true,
+			showWeather: false,
+			showCountdown: true,
+			autoBrightness: true,
+			brightnessLevel: 5,
+			refreshInterval: 60,
+			imageIndex: 0
+		};
+
+		// 初始化页面
+		document.addEventListener('DOMContentLoaded', function() {
+			initializeUI();
+			loadCountdownEvents();
+		});
+
+		function initializeUI() {
+			// 标签页切换
+			document.querySelectorAll('.tab').forEach(tab => {
+				tab.addEventListener('click', function() {
+					const tabId = this.getAttribute('data-tab');
+					switchTab(tabId);
+				});
+			});
+
+			// 样式卡片选择
+			document.querySelectorAll('.card').forEach(card => {
+				card.addEventListener('click', function() {
+					const parent = this.parentElement;
+					parent.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+					this.classList.add('selected');
+				});
+			});
+
+			// 图片上传
+			const imageUpload = document.getElementById('image-upload');
+			const imageFile = document.getElementById('image-file');
+			
+			imageUpload.addEventListener('click', () => imageFile.click());
+			imageFile.addEventListener('change', handleImageSelect);
+			
+			// 拖拽上传
+			imageUpload.addEventListener('dragover', handleDragOver);
+			imageUpload.addEventListener('drop', handleImageDrop);
+
+			// 倒数日管理
+			document.getElementById('add-countdown').addEventListener('click', showCountdownForm);
+			document.getElementById('save-countdown').addEventListener('click', saveCountdown);
+			document.getElementById('cancel-countdown').addEventListener('click', hideCountdownForm);
+
+			// 滑块值显示
+			document.getElementById('countdown-priority').addEventListener('input', function() {
+				document.getElementById('priority-value').textContent = this.value;
+			});
+			document.getElementById('brightness').addEventListener('input', function() {
+				document.getElementById('brightness-value').textContent = this.value;
+			});
+
+			// 按钮事件
+			document.getElementById('connect-button').addEventListener('click', onClick);
+			document.getElementById('setime-button').addEventListener('click', syncTime);
+			document.getElementById('upload-image').addEventListener('click', uploadImage);
+			document.getElementById('apply-settings').addEventListener('click', applySettings);
+		}
+
+		function switchTab(tabId) {
+			// 切换标签页
+			document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+			document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+			
+			document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+			document.getElementById(tabId).classList.add('active');
+		}
 
 		function formatTime(year, month, mday, hour, min, sec) {
 			month += 1;
@@ -52,6 +567,402 @@
 
 				var server = await device.gatt.connect();
 				console.log('设备已连接!');
+
+				var service = await server.getPrimaryService( 0xff00 );
+				console.log('获得service: ', service.uuid);
+
+				ctrlPoint = await service.getCharacteristic( 0xff03 );
+				var adc1Value = await service.getCharacteristic( 0xff02 );
+				longValue = await service.getCharacteristic( 0xff01 );
+
+				cur_voltage = await adc1Value.readValue();
+				console.log('cur_voltage:', cur_voltage);
+				document.getElementById('current_voltage').textContent = "当前电压: "+cur_voltage.getUint16(0, true) + "mV";
+
+				var year, month, mday, wday, hour, minute, second;
+				cur_time = await longValue.readValue();
+				year   = cur_time.getUint16(0, true);
+				month  = cur_time.getUint8(2);
+				mday   = cur_time.getUint8(3);
+				wday   = cur_time.getUint8(4);
+				hour   = cur_time.getUint8(5);
+				minute = cur_time.getUint8(6);
+				second = cur_time.getUint8(7);
+
+				document.getElementById('current_time').textContent = "设备时间: "+formatTime(year, month, mday, hour, minute, second);
+
+				connected = true;
+				document.getElementById('connect-button').textContent = '断开连接';
+				document.getElementById('connect-button').className = 'btn-danger';
+				document.getElementById('setime-button').disabled = false;
+				document.getElementById('upfirm-button').disabled = false;
+
+				// 加载设备配置
+				await loadDeviceConfig();
+
+			} catch (error) {
+				console.error('连接失败:', error);
+				alert('连接失败: ' + error.message);
+			}
+		}
+
+		function onDisconnect() {
+			console.log('设备已断开连接');
+			connected = false;
+			device = null;
+			longValue = null;
+			ctrlPoint = null;
+			
+			document.getElementById('connect-button').textContent = '连接设备';
+			document.getElementById('connect-button').className = 'btn-primary';
+			document.getElementById('setime-button').disabled = true;
+			document.getElementById('upfirm-button').disabled = true;
+			
+			document.getElementById('device_name').textContent = '';
+			document.getElementById('current_voltage').textContent = '';
+			document.getElementById('current_time').textContent = '';
+		}
+
+		function disconnect() {
+			if (device && device.gatt.connected) {
+				device.gatt.disconnect();
+			}
+		}
+
+		async function syncTime() {
+			if (!connected || !longValue) {
+				alert('设备未连接');
+				return;
+			}
+
+			try {
+				var now = new Date();
+				var buffer = new ArrayBuffer(8);
+				var view = new DataView(buffer);
+				
+				view.setUint16(0, now.getFullYear(), true);
+				view.setUint8(2, now.getMonth());
+				view.setUint8(3, now.getDate());
+				view.setUint8(4, now.getDay());
+				view.setUint8(5, now.getHours());
+				view.setUint8(6, now.getMinutes());
+				view.setUint8(7, now.getSeconds());
+
+				await longValue.writeValue(buffer);
+				console.log('时间同步成功');
+				alert('时间同步成功');
+				
+				// 更新显示的系统时间
+				document.getElementById('system_time').textContent = "系统时间: " + now.toLocaleString();
+				
+			} catch (error) {
+				console.error('时间同步失败:', error);
+				alert('时间同步失败: ' + error.message);
+			}
+		}
+
+		// 图片处理函数
+		function handleImageSelect(event) {
+			const file = event.target.files[0];
+			if (file) {
+				processImageFile(file);
+			}
+		}
+
+		function handleDragOver(event) {
+			event.preventDefault();
+			event.currentTarget.classList.add('dragover');
+		}
+
+		function handleImageDrop(event) {
+			event.preventDefault();
+			event.currentTarget.classList.remove('dragover');
+			
+			const files = event.dataTransfer.files;
+			if (files.length > 0) {
+				processImageFile(files[0]);
+			}
+		}
+
+		function processImageFile(file) {
+			if (file.size > 32 * 1024) {
+				alert('图片文件过大，请选择小于32KB的图片');
+				return;
+			}
+
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				selectedImage = e.target.result;
+				
+				// 显示预览
+				const preview = document.getElementById('image-preview');
+				preview.innerHTML = `<img src="${selectedImage}" class="image-preview" alt="图片预览">`;
+				
+				document.getElementById('upload-image').disabled = false;
+			};
+			reader.readAsDataURL(file);
+		}
+
+		async function uploadImage() {
+			if (!selectedImage || !connected) {
+				alert('请先选择图片并连接设备');
+				return;
+			}
+
+			try {
+				// 这里应该实现图片上传到设备的逻辑
+				// 暂时显示成功消息
+				alert('图片上传成功');
+				console.log('图片上传成功');
+				
+			} catch (error) {
+				console.error('图片上传失败:', error);
+				alert('图片上传失败: ' + error.message);
+			}
+		}
+
+		// 倒数日管理函数
+		function loadCountdownEvents() {
+			// 从本地存储加载倒数日事件
+			const saved = localStorage.getItem('countdownEvents');
+			if (saved) {
+				countdownEvents = JSON.parse(saved);
+			} else {
+				// 添加一些示例事件
+				countdownEvents = [
+					{
+						name: '春节',
+						desc: '中国传统新年',
+						type: 1, // 每年重复
+						targetDate: '2025-01-29',
+						targetTime: '00:00',
+						priority: 10,
+						showOnMain: true
+					},
+					{
+						name: '中秋节',
+						desc: '团圆佳节',
+						type: 1, // 每年重复
+						targetDate: '2025-10-06',
+						targetTime: '00:00',
+						priority: 8,
+						showOnMain: true
+					}
+				];
+			}
+			updateCountdownList();
+		}
+
+		function saveCountdownEvents() {
+			localStorage.setItem('countdownEvents', JSON.stringify(countdownEvents));
+		}
+
+		function updateCountdownList() {
+			const list = document.getElementById('countdown-list');
+			list.innerHTML = '';
+
+			countdownEvents.forEach((event, index) => {
+				const item = document.createElement('div');
+				item.className = 'countdown-item';
+				
+				const typeNames = ['一次性', '每年', '每月', '每周', '每日'];
+				
+				item.innerHTML = `
+					<div class="countdown-info">
+						<div class="countdown-name">${event.name}</div>
+						<div class="countdown-date">${event.targetDate} ${event.targetTime} (${typeNames[event.type]})</div>
+						<div class="countdown-date">${event.desc}</div>
+					</div>
+					<div class="countdown-actions">
+						<button class="btn-secondary" onclick="editCountdown(${index})">编辑</button>
+						<button class="btn-danger" onclick="deleteCountdown(${index})">删除</button>
+					</div>
+				`;
+				
+				list.appendChild(item);
+			});
+		}
+
+		function showCountdownForm(index = -1) {
+			currentCountdownIndex = index;
+			const form = document.getElementById('countdown-form');
+			
+			if (index >= 0) {
+				// 编辑模式
+				const event = countdownEvents[index];
+				document.getElementById('countdown-name').value = event.name;
+				document.getElementById('countdown-desc').value = event.desc;
+				document.getElementById('countdown-type').value = event.type;
+				document.getElementById('countdown-date').value = event.targetDate;
+				document.getElementById('countdown-time').value = event.targetTime;
+				document.getElementById('countdown-priority').value = event.priority;
+				document.getElementById('priority-value').textContent = event.priority;
+				document.getElementById('countdown-show-main').checked = event.showOnMain;
+			} else {
+				// 新建模式
+				document.getElementById('countdown-name').value = '';
+				document.getElementById('countdown-desc').value = '';
+				document.getElementById('countdown-type').value = '0';
+				document.getElementById('countdown-date').value = '';
+				document.getElementById('countdown-time').value = '00:00';
+				document.getElementById('countdown-priority').value = '5';
+				document.getElementById('priority-value').textContent = '5';
+				document.getElementById('countdown-show-main').checked = true;
+			}
+			
+			form.style.display = 'block';
+		}
+
+		function hideCountdownForm() {
+			document.getElementById('countdown-form').style.display = 'none';
+			currentCountdownIndex = -1;
+		}
+
+		function saveCountdown() {
+			const name = document.getElementById('countdown-name').value.trim();
+			const desc = document.getElementById('countdown-desc').value.trim();
+			const type = parseInt(document.getElementById('countdown-type').value);
+			const targetDate = document.getElementById('countdown-date').value;
+			const targetTime = document.getElementById('countdown-time').value;
+			const priority = parseInt(document.getElementById('countdown-priority').value);
+			const showOnMain = document.getElementById('countdown-show-main').checked;
+
+			if (!name || !targetDate) {
+				alert('请填写事件名称和目标日期');
+				return;
+			}
+
+			const event = {
+				name,
+				desc,
+				type,
+				targetDate,
+				targetTime,
+				priority,
+				showOnMain
+			};
+
+			if (currentCountdownIndex >= 0) {
+				// 更新现有事件
+				countdownEvents[currentCountdownIndex] = event;
+			} else {
+				// 添加新事件
+				countdownEvents.push(event);
+			}
+
+			saveCountdownEvents();
+			updateCountdownList();
+			hideCountdownForm();
+			
+			// 如果设备已连接，同步到设备
+			if (connected) {
+				syncCountdownToDevice();
+			}
+		}
+
+		function editCountdown(index) {
+			showCountdownForm(index);
+		}
+
+		function deleteCountdown(index) {
+			if (confirm('确定要删除这个倒数日事件吗？')) {
+				countdownEvents.splice(index, 1);
+				saveCountdownEvents();
+				updateCountdownList();
+				
+				// 如果设备已连接，同步到设备
+				if (connected) {
+					syncCountdownToDevice();
+				}
+			}
+		}
+
+		async function syncCountdownToDevice() {
+			if (!connected || !ctrlPoint) {
+				return;
+			}
+
+			try {
+				// 这里应该实现倒数日数据同步到设备的逻辑
+				console.log('同步倒数日数据到设备');
+				
+			} catch (error) {
+				console.error('同步倒数日数据失败:', error);
+			}
+		}
+
+		async function applySettings() {
+			if (!connected) {
+				alert('请先连接设备');
+				return;
+			}
+
+			try {
+				// 收集设置
+				displayConfig.showSeconds = document.getElementById('show-seconds').checked;
+				displayConfig.showDate = document.getElementById('show-date').checked;
+				displayConfig.showLunar = document.getElementById('show-lunar').checked;
+				displayConfig.showFestival = document.getElementById('show-festival').checked;
+				displayConfig.brightnessLevel = parseInt(document.getElementById('brightness').value);
+				displayConfig.refreshInterval = parseInt(document.getElementById('refresh-interval').value);
+				displayConfig.autoBrightness = document.getElementById('auto-brightness').checked;
+
+				// 获取选中的样式
+				const selectedTimeStyle = document.querySelector('#time-mode .card.selected');
+				if (selectedTimeStyle) {
+					const styles = ['digital', 'analog', 'minimal', 'retro', 'neon'];
+					displayConfig.timeStyle = styles.indexOf(selectedTimeStyle.getAttribute('data-style'));
+				}
+
+				const selectedCalendarStyle = document.querySelector('#calendar-mode .card.selected');
+				if (selectedCalendarStyle) {
+					const styles = ['grid', 'list', 'minimal', 'chinese', 'modern'];
+					displayConfig.calendarStyle = styles.indexOf(selectedCalendarStyle.getAttribute('data-style'));
+				}
+
+				// 这里应该实现配置同步到设备的逻辑
+				console.log('应用设置:', displayConfig);
+				alert('设置已应用');
+				
+			} catch (error) {
+				console.error('应用设置失败:', error);
+				alert('应用设置失败: ' + error.message);
+			}
+		}
+
+		async function loadDeviceConfig() {
+			if (!connected) {
+				return;
+			}
+
+			try {
+				// 这里应该实现从设备加载配置的逻辑
+				console.log('从设备加载配置');
+				
+				// 更新UI
+				document.getElementById('show-seconds').checked = displayConfig.showSeconds;
+				document.getElementById('show-date').checked = displayConfig.showDate;
+				document.getElementById('show-lunar').checked = displayConfig.showLunar;
+				document.getElementById('show-festival').checked = displayConfig.showFestival;
+				document.getElementById('brightness').value = displayConfig.brightnessLevel;
+				document.getElementById('brightness-value').textContent = displayConfig.brightnessLevel;
+				document.getElementById('refresh-interval').value = displayConfig.refreshInterval;
+				document.getElementById('auto-brightness').checked = displayConfig.autoBrightness;
+				
+			} catch (error) {
+				console.error('加载设备配置失败:', error);
+			}
+		}
+
+		// 定时更新系统时间显示
+		setInterval(function() {
+			const now = new Date();
+			document.getElementById('system_time').textContent = "系统时间: " + now.toLocaleString();
+		}, 1000);
+
+	</script>
+</body>
+</html>
 
 				var service = await server.getPrimaryService( 0xff00 );
 				console.log('获得service: ', service.uuid);

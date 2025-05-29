@@ -49,6 +49,9 @@
 #include "adc.h"
 
 #include "epd.h"
+#include "features/chinese_calendar.h"
+#include "features/countdown.h"
+#include "features/display_modes.h"
 
 /*
  * GLOBAL VARIABLE DEFINITIONS
@@ -521,34 +524,38 @@ void clock_draw(int flags)
 	memset(fb_bw, 0xff, scr_h*line_bytes);
 	memset(fb_rr, 0x00, scr_h*line_bytes);
 
-	// 显示电池电量
-	draw_batt(190, 13);
-	if(flags&DRAW_BT){
-		// 显示蓝牙图标
+	// 准备显示数据
+	display_data_t display_data = {0};
+	display_data.year = year;
+	display_data.month = month + 1;
+	display_data.day = date + 1;
+	display_data.hour = hour;
+	display_data.minute = minute;
+	display_data.second = second;
+	display_data.weekday = wday;
+	display_data.battery_level = batt_cal(adcval);
+	display_data.temperature = 0; // 暂时没有温度传感器
+	display_data.humidity = 0;    // 暂时没有湿度传感器
+
+	// 获取中文日历信息
+	get_chinese_date(year, month + 1, date + 1, &display_data.chinese_date);
+
+	// 获取下一个倒数日事件
+	display_data.next_countdown = countdown_get_next_event();
+	if (display_data.next_countdown) {
+		countdown_calculate(display_data.next_countdown, 
+				  year, month + 1, date + 1, hour, minute, 
+				  &display_data.countdown_result);
+	}
+
+	// 使用新的显示系统渲染
+	display_render(&display_data);
+
+	// 在右上角显示状态图标
+	if (flags & DRAW_BT) {
 		draw_bt(180, 13);
 	}
-
-	// 使用大字显示时间
-	select_font(1);
-	sprintf(tbuf, "%02d:%02d", hour, minute);
-	draw_text(12, 25, tbuf, BLACK);
-
-	// 显示公历日期
-	sprintf(tbuf, "%4d年%2d月%2d日   星期%s", year, month+1, date+1, wday_str[wday]);
-	select_font(0);
-	draw_text(15, 8, tbuf, BLACK);
-
-	// 显示农历日期(不显示年)
-	ldate_str(tbuf);
-	draw_text(12, 85, tbuf, BLACK);
-	// 显示节气与节假日
-	if(jieqi_str)
-		draw_text( 98, 85, jieqi_str, BLACK);
-	if(flags&DRAW_BT){
-		draw_text(152, 85, bt_id, BLACK);
-	}else if(holiday_str){
-		draw_text(152, 85, holiday_str, BLACK);
-	}
+	draw_batt(190, 13);
 
 	// 墨水屏更新显示
 	epd_init();

@@ -48,6 +48,9 @@
 #include "gap.h"
 #include "app_easy_timer.h"
 #include "user_peripheral.h"
+#include "features/chinese_calendar.h"
+#include "features/countdown.h"
+#include "features/display_modes.h"
 #include "user_custs1_impl.h"
 #include "user_custs1_def.h"
 #include "co_bt.h"
@@ -188,6 +191,13 @@ void user_app_init(void)
 	}
 
 	selflash(otp_boot);
+
+	// 初始化新功能模块
+	chinese_calendar_init();
+	countdown_init();
+	display_modes_init();
+	
+	printk("Enhanced features initialized\n");
 
     default_app_on_init();
 }
