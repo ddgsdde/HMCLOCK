@@ -518,7 +518,8 @@ void clock_draw(int flags)
 
 	epd_update_mode(flags&3);
 
-	memset(fb_bw, 0xff, scr_h*line_bytes);
+	// 根据反色设置清屏
+	memset(fb_bw, screen_inverted ? 0x00 : 0xff, scr_h*line_bytes);
 	memset(fb_rr, 0x00, scr_h*line_bytes);
 
 	// 显示电池电量
@@ -528,26 +529,43 @@ void clock_draw(int flags)
 		draw_bt(180, 13);
 	}
 
+	// 计算带时区偏移的时间
+	int display_hour = hour;
+	int display_minute = minute;
+	
+	// 简单的时区偏移计算（实际应用中需要更复杂的日期处理）
+	if (timezone_offset != 8) { // 8是默认东八区
+		display_hour += (timezone_offset - 8);
+		if (display_hour < 0) display_hour += 24;
+		if (display_hour >= 24) display_hour -= 24;
+	}
+
 	// 使用大字显示时间
 	select_font(1);
-	sprintf(tbuf, "%02d:%02d", hour, minute);
-	draw_text(12, 25, tbuf, BLACK);
+	sprintf(tbuf, "%02d:%02d", display_hour, display_minute);
+	draw_text(12, 25, tbuf, screen_inverted ? WHITE : BLACK);
 
 	// 显示公历日期
 	sprintf(tbuf, "%4d年%2d月%2d日   星期%s", year, month+1, date+1, wday_str[wday]);
 	select_font(0);
-	draw_text(15, 8, tbuf, BLACK);
+	draw_text(15, 8, tbuf, screen_inverted ? WHITE : BLACK);
 
 	// 显示农历日期(不显示年)
 	ldate_str(tbuf);
-	draw_text(12, 85, tbuf, BLACK);
+	draw_text(12, 85, tbuf, screen_inverted ? WHITE : BLACK);
 	// 显示节气与节假日
 	if(jieqi_str)
-		draw_text( 98, 85, jieqi_str, BLACK);
+		draw_text( 98, 85, jieqi_str, screen_inverted ? WHITE : BLACK);
 	if(flags&DRAW_BT){
-		draw_text(152, 85, bt_id, BLACK);
+		draw_text(152, 85, bt_id, screen_inverted ? WHITE : BLACK);
 	}else if(holiday_str){
-		draw_text(152, 85, holiday_str, BLACK);
+		draw_text(152, 85, holiday_str, screen_inverted ? WHITE : BLACK);
+	}
+
+	// 显示时区信息（如果不是默认时区）
+	if (timezone_offset != 8) {
+		sprintf(tbuf, "UTC%+d", timezone_offset);
+		draw_text(180, 85, tbuf, screen_inverted ? WHITE : BLACK);
 	}
 
 	// 墨水屏更新显示
@@ -569,14 +587,295 @@ void user_svc1_ctrl_wr_ind_handler(ke_msg_id_t const msgid, struct custs1_val_wr
 
 }
 
+// 显示模式定义
+typedef enum {
+    DISPLAY_MODE_CLOCK = 0,
+    DISPLAY_MODE_CALENDAR = 1,
+    DISPLAY_MODE_IMAGE = 2,
+    DISPLAY_MODE_CUSTOM = 3
+} display_mode_t;
+
+static display_mode_t current_display_mode = DISPLAY_MODE_CLOCK;
+static int8_t timezone_offset = 8; // 默认东八区
+static char custom_text[1024] = {0};
+static int screen_inverted = 0;
+
+// 图片上传相关
+#define MAX_IMAGE_SIZE 2048  // 最大图片数据大小
+static uint8_t image_buffer[MAX_IMAGE_SIZE];
+static int image_width = 0;
+static int image_height = 0;
+static int image_data_received = 0;
+static int image_total_size = 0;
+
+// 变量替换函数
+void replace_variables(char *text, char *output, int max_len) {
+    int i = 0, j = 0;
+    while (text[i] && j < max_len - 1) {
+        if (text[i] == '{') {
+            i++;
+            if (text[i] == 'Y') {
+                // 汉字年
+                j += snprintf(output + j, max_len - j, "%d年", year);
+            } else if (text[i] == 'y') {
+                // 数字年
+                j += snprintf(output + j, max_len - j, "%d", year);
+            } else if (text[i] == 'M') {
+                // 汉字月
+                j += snprintf(output + j, max_len - j, "%d月", month + 1);
+            } else if (text[i] == 'm') {
+                // 数字月
+                j += snprintf(output + j, max_len - j, "%02d", month + 1);
+            } else if (text[i] == 'D') {
+                // 汉字日
+                j += snprintf(output + j, max_len - j, "%d日", date + 1);
+            } else if (text[i] == 'd') {
+                // 数字日
+                j += snprintf(output + j, max_len - j, "%02d", date + 1);
+            } else if (text[i] == 'W') {
+                // 汉字星期
+                char *wday_names[] = {"一", "二", "三", "四", "五", "六", "日"};
+                j += snprintf(output + j, max_len - j, "星期%s", wday_names[wday]);
+            } else if (text[i] == 'w') {
+                // 数字星期
+                j += snprintf(output + j, max_len - j, "%d", wday + 1);
+            }
+            i++; // 跳过变量名
+            if (text[i] == '}') i++; // 跳过结束括号
+        } else {
+            output[j++] = text[i++];
+        }
+    }
+    output[j] = '\0';
+}
+
+// 绘制自定义内容
+void draw_custom_content() {
+    char processed_text[1024];
+    replace_variables(custom_text, processed_text, sizeof(processed_text));
+    
+    select_font(0);
+    draw_text(10, 20, processed_text, screen_inverted ? WHITE : BLACK);
+}
+
+// 绘制日历模式
+void draw_calendar_mode() {
+    char tbuf[64];
+    
+    // 清屏
+    memset(fb_bw, screen_inverted ? 0x00 : 0xff, scr_h*line_bytes);
+    memset(fb_rr, 0x00, scr_h*line_bytes);
+    
+    select_font(1);
+    // 显示年月
+    sprintf(tbuf, "%04d年%02d月", year, month + 1);
+    draw_text(20, 20, tbuf, screen_inverted ? WHITE : BLACK);
+    
+    select_font(0);
+    // 显示日期和星期
+    sprintf(tbuf, "%02d日 星期%s", date + 1, wday_str[wday]);
+    draw_text(20, 60, tbuf, screen_inverted ? WHITE : BLACK);
+    
+    // 显示农历
+    sprintf(tbuf, "农历 %s月%s", 
+            l_month > 12 ? "闰" : "",
+            l_date < 10 ? lday_str_hi[0] : 
+            l_date < 20 ? lday_str_hi[1] : lday_str_hi[2]);
+    draw_text(20, 80, tbuf, screen_inverted ? WHITE : BLACK);
+}
+
+// 绘制图片模式
+void draw_image_mode() {
+    // 清屏
+    memset(fb_bw, screen_inverted ? 0x00 : 0xff, scr_h*line_bytes);
+    memset(fb_rr, 0x00, scr_h*line_bytes);
+    
+    if (image_data_received > 0 && image_width > 0 && image_height > 0) {
+        // 居中显示图片
+        int x_offset = (scr_w - image_width) / 2;
+        int y_offset = (scr_h - image_height) / 2;
+        if (x_offset < 0) x_offset = 0;
+        if (y_offset < 0) y_offset = 0;
+        
+        draw_image(x_offset, y_offset, image_width, image_height, 
+                   image_buffer, screen_inverted ? WHITE : BLACK);
+    } else {
+        // 显示提示信息
+        select_font(0);
+        draw_text(20, 40, "图片模式", screen_inverted ? WHITE : BLACK);
+        draw_text(20, 60, "请上传图片", screen_inverted ? WHITE : BLACK);
+    }
+}
+
+// 处理图片上传
+void handle_image_upload(const uint8_t* data, int length) {
+    if (length < 4) return;
+    
+    uint8_t cmd = data[0];
+    
+    switch(cmd) {
+        case 0xF0: // 图片头信息
+            if (length >= 6) {
+                image_width = (data[2] << 8) | data[1];
+                image_height = (data[4] << 8) | data[3];
+                image_total_size = data[5];
+                image_data_received = 0;
+                printk("Image header: %dx%d, size: %d\n", image_width, image_height, image_total_size);
+            }
+            break;
+            
+        case 0xF1: // 图片数据
+            if (length > 1 && image_data_received < MAX_IMAGE_SIZE) {
+                int data_len = length - 1;
+                if (image_data_received + data_len > MAX_IMAGE_SIZE) {
+                    data_len = MAX_IMAGE_SIZE - image_data_received;
+                }
+                memcpy(&image_buffer[image_data_received], &data[1], data_len);
+                image_data_received += data_len;
+                printk("Image data received: %d/%d\n", image_data_received, image_total_size);
+            }
+            break;
+            
+        case 0xF3: // 图片上传完成
+            printk("Image upload complete\n");
+            if (current_display_mode == DISPLAY_MODE_IMAGE) {
+                draw_image_mode();
+                epd_screen_update();
+            }
+            break;
+    }
+}
+
 void user_svc1_long_val_wr_ind_handler(ke_msg_id_t const msgid, struct custs1_val_write_ind const *param, ke_task_id_t const dest_id, ke_task_id_t const src_id)
 {
-	printk("Long value: %d\n", param->length);
-	if(param->value[0]==0x91){
-		clock_set((uint8_t*)param->value);
-		clock_draw(DRAW_BT|UPDATE_FAST);
-		clock_print();
-	}
+    printk("Long value: %d, cmd: 0x%02X\n", param->length, param->value[0]);
+    
+    uint8_t cmd = param->value[0];
+    
+    switch(cmd) {
+        case 0x91: // 原有的时间同步指令
+            clock_set((uint8_t*)param->value);
+            clock_draw(DRAW_BT|UPDATE_FAST);
+            clock_print();
+            break;
+            
+        case 0xAA: // 重启指令
+            printk("Restart command received\n");
+            // 这里可以添加重启逻辑
+            break;
+            
+        case 0xDD: // 同步时间 (新格式)
+            if (param->length >= 8) {
+                // 处理新的时间同步格式
+                clock_set((uint8_t*)param->value);
+                clock_draw(DRAW_BT|UPDATE_FAST);
+            }
+            break;
+            
+        case 0xE0: // 屏幕相关指令
+            if (param->length >= 2) {
+                uint8_t subcmd = param->value[1];
+                switch(subcmd) {
+                    case 0x01: // 修改屏幕
+                        epd_screen_clean(UPDATE_FULL);
+                        break;
+                }
+            }
+            break;
+            
+        case 0xE1: // 模式切换指令
+            if (param->length >= 2) {
+                uint8_t mode = param->value[1];
+                switch(mode) {
+                    case 0x00: // 图片模式
+                        current_display_mode = DISPLAY_MODE_IMAGE;
+                        draw_image_mode();
+                        epd_screen_update();
+                        break;
+                    case 0x01: // 日历模式
+                        current_display_mode = DISPLAY_MODE_CALENDAR;
+                        draw_calendar_mode();
+                        epd_screen_update();
+                        break;
+                    case 0x02: // 时钟模式
+                        current_display_mode = DISPLAY_MODE_CLOCK;
+                        clock_draw(UPDATE_FULL);
+                        break;
+                }
+            }
+            break;
+            
+        case 0xE2: // 屏幕强制刷新
+            epd_screen_update();
+            break;
+            
+        case 0xE3: // 全屏反色显示
+            screen_inverted = !screen_inverted;
+            if (current_display_mode == DISPLAY_MODE_CLOCK) {
+                clock_draw(UPDATE_FULL);
+            } else if (current_display_mode == DISPLAY_MODE_CALENDAR) {
+                draw_calendar_mode();
+                epd_screen_update();
+            }
+            break;
+            
+        case 0xE4: // 当前时区算加
+            timezone_offset++;
+            if (timezone_offset > 12) timezone_offset = 12;
+            printk("Timezone offset: %d\n", timezone_offset);
+            break;
+            
+        case 0xEF: // 设置时区或激活码
+            if (param->length >= 5) {
+                // 设置时区
+                int8_t new_offset = (int8_t)param->value[1];
+                if (new_offset >= -12 && new_offset <= 12) {
+                    timezone_offset = new_offset;
+                    printk("Timezone set to: %d\n", timezone_offset);
+                }
+            }
+            break;
+            
+        case 0xF0: // 图片头信息
+        case 0xF1: // 图片数据
+        case 0xF3: // 图片上传完成
+            handle_image_upload(param->value, param->length);
+            break;
+            
+        case 0xF2: // 设置中文内容
+            if (param->length > 2) {
+                int len = param->length - 2;
+                if (len > sizeof(custom_text) - 1) len = sizeof(custom_text) - 1;
+                memcpy(custom_text, &param->value[2], len);
+                custom_text[len] = '\0';
+                current_display_mode = DISPLAY_MODE_CUSTOM;
+                
+                // 清屏并绘制自定义内容
+                memset(fb_bw, screen_inverted ? 0x00 : 0xff, scr_h*line_bytes);
+                memset(fb_rr, 0x00, scr_h*line_bytes);
+                draw_custom_content();
+                epd_screen_update();
+                printk("Custom text set: %s\n", custom_text);
+            }
+            break;
+            
+        case '$': // 重置显示内容 (以$开头)
+        case '@': // 重置显示内容 (以@开头)
+            current_display_mode = DISPLAY_MODE_CLOCK;
+            clock_draw(UPDATE_FULL);
+            break;
+            
+        default:
+            // 检查是否是 ### 参数保存指令
+            if (param->length >= 3 && 
+                param->value[0] == '#' && 
+                param->value[1] == '#' && 
+                param->value[2] == '#') {
+                printk("Save parameters command\n");
+                // 这里可以添加参数保存到Flash的逻辑
+            }
+            break;
+    }
 }
 
 void user_svc1_long_val_att_info_req_handler(ke_msg_id_t const msgid, struct custs1_att_info_req const *param, ke_task_id_t const dest_id, ke_task_id_t const src_id)

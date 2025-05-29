@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增强版电子墨水屏时钟控制</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .primary { background-color: #007bff; color: white; }
+        .primary:hover { background-color: #0056b3; }
+        .secondary { background-color: #6c757d; color: white; }
+        .secondary:hover { background-color: #545b62; }
+        .success { background-color: #28a745; color: white; }
+        .success:hover { background-color: #1e7e34; }
+        .warning { background-color: #ffc107; color: black; }
+        .warning:hover { background-color: #e0a800; }
+        .danger { background-color: #dc3545; color: white; }
+        .danger:hover { background-color: #c82333; }
+        button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+        .info-panel {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>增强版电子墨水屏时钟控制</h1>
+    
+    <div class="container">
+        <h2>连接设备</h2>
+        <div class="button-group">
+            <button id="connect-button" class="primary">连接设备</button>
+            <button id="restart-button" class="danger" disabled>重启设备</button>
+        </div>
+        <div class="button-group">
+            <a href="debug_bluetooth.html" target="_blank" style="text-decoration: none;">
+                <button class="secondary">🔍 蓝牙调试工具</button>
+            </a>
+            <button id="check-bluetooth" class="secondary">检查蓝牙支持</button>
+        </div>
+        <div class="info-panel">
+            <div id="device_name">设备名: 未连接</div>
+            <div id="current_voltage">当前电压: --</div>
+            <div id="current_time">设备时间: --</div>
+            <div id="system_time">系统时间: --</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>时间同步</h2>
+        <div class="button-group">
+            <button id="setime-button" class="success" disabled>同步时间</button>
+        </div>
+        <div class="input-group">
+            <label for="timezone">时区设置:</label>
+            <select id="timezone">
+                <option value="-12">UTC-12</option>
+                <option value="-11">UTC-11</option>
+                <option value="-10">UTC-10</option>
+                <option value="-9">UTC-9</option>
+                <option value="-8">UTC-8</option>
+                <option value="-7">UTC-7</option>
+                <option value="-6">UTC-6</option>
+                <option value="-5">UTC-5</option>
+                <option value="-4">UTC-4</option>
+                <option value="-3">UTC-3</option>
+                <option value="-2">UTC-2</option>
+                <option value="-1">UTC-1</option>
+                <option value="0">UTC+0</option>
+                <option value="1">UTC+1</option>
+                <option value="2">UTC+2</option>
+                <option value="3">UTC+3</option>
+                <option value="4">UTC+4</option>
+                <option value="5">UTC+5</option>
+                <option value="6">UTC+6</option>
+                <option value="7">UTC+7</option>
+                <option value="8" selected>UTC+8 (北京时间)</option>
+                <option value="9">UTC+9</option>
+                <option value="10">UTC+10</option>
+                <option value="11">UTC+11</option>
+                <option value="12">UTC+12</option>
+            </select>
+        </div>
+        <div class="button-group">
+            <button id="set-timezone-button" class="secondary" disabled>设置时区</button>
+            <button id="timezone-plus-button" class="secondary" disabled>时区+1</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>显示模式</h2>
+        <div class="button-group">
+            <button id="mode-clock" class="primary" disabled>时钟模式</button>
+            <button id="mode-calendar" class="primary" disabled>日历模式</button>
+            <button id="mode-image" class="primary" disabled>图片模式</button>
+        </div>
+        <div class="info-panel">
+            <p>💡 提示：要上传自定义图片，请使用 <a href="image_upload.html" target="_blank" style="color: #007bff;">图片上传工具</a></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>屏幕控制</h2>
+        <div class="button-group">
+            <button id="refresh-screen" class="secondary" disabled>强制刷新</button>
+            <button id="invert-screen" class="warning" disabled>反色显示</button>
+            <button id="clear-screen" class="secondary" disabled>清空屏幕</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>自定义文本</h2>
+        <div class="input-group">
+            <label for="custom-text">自定义文本内容 (支持变量: {Y}年 {M}月 {D}日 {W}星期):</label>
+            <textarea id="custom-text" placeholder="例如: 今天是{Y}{M}{D} {W}&#10;现在时间: {y}-{m}-{d}"></textarea>
+        </div>
+        <div class="button-group">
+            <button id="send-custom-text" class="success" disabled>发送自定义文本</button>
+            <button id="reset-display" class="secondary" disabled>重置显示</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>参数管理</h2>
+        <div class="button-group">
+            <button id="save-params" class="success" disabled>保存参数</button>
+        </div>
+    </div>
+
+    <div id="status-message"></div>
+
+    <script src="log.js"></script>
+    <script>
+        let connected = false;
+        let device = null;
+        let longValue = null;
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 3000);
+        }
+
+        function formatTime(year, month, mday, hour, min, sec) {
+            month += 1;
+            if(month<10) month = '0'+month;
+            if(mday<10)  mday  = '0'+mday;
+            if(hour<10)  hour  = '0'+hour;
+            if(min<10)   min   = '0'+min;
+            if(sec<10)   sec   = '0'+sec;
+            return year+"-"+month+"-"+mday+" "+hour+":"+min+":"+sec+" ";
+        }
+
+        function updateButtonStates(isConnected) {
+            const buttons = [
+                'restart-button', 'setime-button', 'set-timezone-button', 
+                'timezone-plus-button', 'mode-clock', 'mode-calendar', 
+                'mode-image', 'refresh-screen', 'invert-screen', 
+                'clear-screen', 'send-custom-text', 'reset-display', 'save-params'
+            ];
+            
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = !isConnected;
+            });
+        }
+
+        async function connectToDevice() {
+            try {
+                console.log('请求设备...');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { namePrefix: "DLG-CLOCK" },
+                        { namePrefix: "CLOCK" },
+                        { namePrefix: "DLG" },
+                        { namePrefix: "HM" },
+                        { namePrefix: "EPD" },
+                        { services: [0xff00] }
+                    ],
+                    optionalServices: [ 0xff00 ]
+                });
+                
+                console.log('device: ', device.name);
+                document.getElementById('device_name').textContent = "设备名: "+device.name;
+                device.ongattserverdisconnected = onDisconnect;
+
+                const server = await device.gatt.connect();
+                console.log('设备已连接!');
+
+                const service = await server.getPrimaryService( 0xff00 );
+                console.log('获得service: ', service.uuid);
+
+                const ctrlPoint = await service.getCharacteristic( 0xff03 );
+                const adc1Value = await service.getCharacteristic( 0xff02 );
+                longValue = await service.getCharacteristic( 0xff01 );
+
+                const cur_voltage = await adc1Value.readValue();
+                console.log('cur_voltage:', cur_voltage);
+                document.getElementById('current_voltage').textContent = "当前电压: "+cur_voltage.getUint16(0, true) + "mV";
+
+                const cur_time = await longValue.readValue();
+                const year = cur_time.getUint16(0, true);
+                const month = cur_time.getUint8(2);
+                const mday = cur_time.getUint8(3);
+                const hour = cur_time.getUint8(4);
+                const minute = cur_time.getUint8(5);
+                const second = cur_time.getUint8(6);
+                document.getElementById('current_time').textContent = "设备时间: "+formatTime(year, month, mday, hour, minute, second);
+
+                const today = new Date();
+                document.getElementById('system_time').textContent = "系统时间: "+formatTime(
+                    today.getFullYear(), today.getMonth(), today.getDate(), 
+                    today.getHours(), today.getMinutes(), today.getSeconds()
+                );
+
+                connected = true;
+                updateButtonStates(true);
+                document.getElementById('connect-button').textContent = "断开连接";
+                showStatus('设备连接成功!', 'success');
+            } catch (error) {
+                console.log('连接失败:', error);
+                showStatus('连接失败: ' + error.message, 'error');
+                disconnect();
+            }
+        }
+
+        function disconnect() {
+            if(device && device.gatt.connected){
+                device.gatt.disconnect();
+            }
+            onDisconnect();
+        }
+
+        function onDisconnect() {
+            device = null;
+            console.log('设备已断开连接');
+            connected = false;
+            updateButtonStates(false);
+            document.getElementById('connect-button').textContent = "连接设备";
+            document.getElementById('device_name').textContent = "设备名: 未连接";
+            showStatus('设备已断开连接', 'info');
+        }
+
+        async function sendCommand(commandArray) {
+            if (!connected || !longValue) {
+                showStatus('设备未连接', 'error');
+                return;
+            }
+            
+            try {
+                const buffer = new Uint8Array(commandArray);
+                await longValue.writeValue(buffer);
+                console.log('命令发送成功:', commandArray);
+                return true;
+            } catch (error) {
+                console.error('命令发送失败:', error);
+                showStatus('命令发送失败: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // 事件监听器
+        document.getElementById('connect-button').addEventListener('click', () => {
+            if(connected) {
+                disconnect();
+            } else {
+                connectToDevice();
+            }
+        });
+
+        document.getElementById('restart-button').addEventListener('click', async () => {
+            if (await sendCommand([0xAA])) {
+                showStatus('重启命令已发送', 'success');
+            }
+        });
+
+        document.getElementById('setime-button').addEventListener('click', async () => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const mday = today.getDate();
+            const wday = today.getDay();
+            const hour = today.getHours();
+            const minute = today.getMinutes();
+            const second = today.getSeconds();
+
+            // 获取农历信息
+            const locale_str = today.toLocaleDateString('zh-CN-u-ca-chinese',{month:'numeric',day:'numeric'});
+            let l_month = 0;
+            if(locale_str.charAt(0)=='闰'){
+                l_month = 128;
+                locale_str = locale_str.substr(1,);
+            }
+            const lstr_split = locale_str.split('-');
+            l_month += parseInt(lstr_split[0]);
+            const l_mday = parseInt(lstr_split[1]);
+            const locale_year = today.toLocaleDateString('zh-CN-u-ca-chinese',{year:'numeric'});
+            const l_year = parseInt(locale_year.substr(0,4));
+
+            const buf = [
+                0x91,
+                year % 256,
+                Math.floor(year / 256),
+                month,
+                mday,
+                hour,
+                minute,
+                second,
+                wday,
+                l_year - 2020,
+                l_month - 1,
+                l_mday
+            ];
+
+            if (await sendCommand(buf)) {
+                showStatus('时间同步成功!', 'success');
+                document.getElementById('system_time').textContent = "系统时间: "+formatTime(year, month, mday, hour, minute, second);
+            }
+        });
+
+        document.getElementById('set-timezone-button').addEventListener('click', async () => {
+            const timezone = parseInt(document.getElementById('timezone').value);
+            if (await sendCommand([0xEF, timezone, 0, 0, 0])) {
+                showStatus(`时区设置为 UTC${timezone >= 0 ? '+' : ''}${timezone}`, 'success');
+            }
+        });
+
+        document.getElementById('timezone-plus-button').addEventListener('click', async () => {
+            if (await sendCommand([0xE4])) {
+                showStatus('时区+1', 'success');
+            }
+        });
+
+        document.getElementById('mode-clock').addEventListener('click', async () => {
+            if (await sendCommand([0xE1, 0x02])) {
+                showStatus('切换到时钟模式', 'success');
+            }
+        });
+
+        document.getElementById('mode-calendar').addEventListener('click', async () => {
+            if (await sendCommand([0xE1, 0x01])) {
+                showStatus('切换到日历模式', 'success');
+            }
+        });
+
+        document.getElementById('mode-image').addEventListener('click', async () => {
+            if (await sendCommand([0xE1, 0x00])) {
+                showStatus('切换到图片模式', 'success');
+            }
+        });
+
+        document.getElementById('refresh-screen').addEventListener('click', async () => {
+            if (await sendCommand([0xE2])) {
+                showStatus('屏幕强制刷新', 'success');
+            }
+        });
+
+        document.getElementById('invert-screen').addEventListener('click', async () => {
+            if (await sendCommand([0xE3])) {
+                showStatus('反色显示切换', 'success');
+            }
+        });
+
+        document.getElementById('clear-screen').addEventListener('click', async () => {
+            if (await sendCommand([0xE0, 0x01])) {
+                showStatus('屏幕已清空', 'success');
+            }
+        });
+
+        document.getElementById('send-custom-text').addEventListener('click', async () => {
+            const text = document.getElementById('custom-text').value;
+            if (!text.trim()) {
+                showStatus('请输入自定义文本', 'error');
+                return;
+            }
+
+            const textBytes = new TextEncoder().encode(text);
+            const command = [0xF2, 0x00, ...textBytes];
+            
+            if (await sendCommand(command)) {
+                showStatus('自定义文本已发送', 'success');
+            }
+        });
+
+        document.getElementById('reset-display').addEventListener('click', async () => {
+            if (await sendCommand([0x24])) { // '$' 的ASCII码
+                showStatus('显示已重置', 'success');
+            }
+        });
+
+        document.getElementById('save-params').addEventListener('click', async () => {
+            if (await sendCommand([0x23, 0x23, 0x23])) { // '###' 的ASCII码
+                showStatus('参数已保存', 'success');
+            }
+        });
+
+        // 蓝牙支持检查
+        document.getElementById('check-bluetooth').addEventListener('click', () => {
+            let info = '🔍 蓝牙支持检查结果:\n\n';
+            
+            // 检查Web Bluetooth API支持
+            if ('bluetooth' in navigator) {
+                info += '✅ 浏览器支持Web Bluetooth API\n';
+            } else {
+                info += '❌ 浏览器不支持Web Bluetooth API\n';
+                info += '   推荐使用Chrome、Edge或Opera浏览器\n';
+            }
+            
+            // 检查HTTPS
+            if (location.protocol === 'https:' || location.hostname === 'localhost') {
+                info += '✅ 网站使用安全连接 (HTTPS)\n';
+            } else {
+                info += '❌ 网站未使用HTTPS，Web Bluetooth需要安全连接\n';
+            }
+            
+            // 检查用户代理
+            const userAgent = navigator.userAgent;
+            if (userAgent.includes('Chrome')) {
+                info += '✅ 检测到Chrome浏览器\n';
+            } else if (userAgent.includes('Edg')) {
+                info += '✅ 检测到Edge浏览器\n';
+            } else if (userAgent.includes('Opera')) {
+                info += '✅ 检测到Opera浏览器\n';
+            } else {
+                info += '⚠️ 未检测到推荐的浏览器\n';
+            }
+            
+            info += '\n💡 如果仍然无法连接设备：\n';
+            info += '1. 使用蓝牙调试工具扫描设备\n';
+            info += '2. 确保设备处于广播状态\n';
+            info += '3. 检查设备距离（建议1-2米内）\n';
+            info += '4. 重启浏览器和系统蓝牙\n';
+            
+            alert(info);
+        });
+
+        // 初始化
+        updateButtonStates(false);
+        
+        // 检查蓝牙支持并显示提示
+        if (!('bluetooth' in navigator)) {
+            showStatus('⚠️ 浏览器不支持Web Bluetooth，请使用Chrome、Edge或Opera', 'error');
+        }
+        
+        // 定时更新系统时间
+        setInterval(() => {
+            if (!connected) return;
+            const today = new Date();
+            document.getElementById('system_time').textContent = "系统时间: "+formatTime(
+                today.getFullYear(), today.getMonth(), today.getDate(), 
+                today.getHours(), today.getMinutes(), today.getSeconds()
+            );
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -71,6 +71,14 @@ void draw_text(int x, int y, char *str, int color);
 int select_font(int id);
 void fb_test(void);
 
+// 新增的绘图函数
+void draw_point(int x, int y, int color);
+void draw_line(int x1, int y1, int x2, int y2, int color);
+void draw_circle(int cx, int cy, int radius, int color);
+void draw_filled_circle(int cx, int cy, int radius, int color);
+void draw_rectangle(int x1, int y1, int x2, int y2, int color, int filled);
+void draw_image(int x, int y, int width, int height, const uint8_t* image_data, int color);
+
 
 #define EPD_BWR   0x20
 #define MIRROR_H  0x40
