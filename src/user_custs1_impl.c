@@ -536,7 +536,7 @@ void clock_draw(int flags)
 	display_data.humidity = 0;    // 暂时没有湿度传感器
 
 	// 获取中文日历信息
-	get_chinese_date(year, month + 1, date + 1, &display_data.chinese_date);
+	solar_to_lunar(year, month + 1, date + 1, &display_data.chinese_date);
 
 	// 获取下一个倒数日事件
 	display_data.next_countdown = countdown_get_next_event(year, month + 1, date + 1, hour, minute, 0);
