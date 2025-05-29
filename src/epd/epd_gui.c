@@ -262,5 +262,103 @@ void fb_test(void)
 
 /******************************************************************************/
 
+// 新增的绘图函数，支持二次开发指南中的绘图指令
+
+// 画点函数 - POINT指令
+void draw_point(int x, int y, int color) {
+    draw_pixel(x, y, color);
+}
+
+// 画线函数 - LINE指令
+void draw_line(int x1, int y1, int x2, int y2, int color) {
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+    int err = dx - dy;
+    
+    int x = x1, y = y1;
+    
+    while (1) {
+        draw_pixel(x, y, color);
+        
+        if (x == x2 && y == y2) break;
+        
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
+// 画圆函数 - CIRCLE指令
+void draw_circle(int cx, int cy, int radius, int color) {
+    int x = 0;
+    int y = radius;
+    int d = 3 - 2 * radius;
+    
+    while (x <= y) {
+        // 画8个对称点
+        draw_pixel(cx + x, cy + y, color);
+        draw_pixel(cx - x, cy + y, color);
+        draw_pixel(cx + x, cy - y, color);
+        draw_pixel(cx - x, cy - y, color);
+        draw_pixel(cx + y, cy + x, color);
+        draw_pixel(cx - y, cy + x, color);
+        draw_pixel(cx + y, cy - x, color);
+        draw_pixel(cx - y, cy - x, color);
+        
+        if (d < 0) {
+            d = d + 4 * x + 6;
+        } else {
+            d = d + 4 * (x - y) + 10;
+            y--;
+        }
+        x++;
+    }
+}
+
+// 填充圆函数
+void draw_filled_circle(int cx, int cy, int radius, int color) {
+    for (int y = -radius; y <= radius; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            if (x*x + y*y <= radius*radius) {
+                draw_pixel(cx + x, cy + y, color);
+            }
+        }
+    }
+}
+
+// 画矩形函数 - RECT指令 (已存在，这里是增强版)
+void draw_rectangle(int x1, int y1, int x2, int y2, int color, int filled) {
+    if (filled) {
+        draw_box(x1, y1, x2, y2, color);
+    } else {
+        draw_rect(x1, y1, x2, y2, color);
+    }
+}
+
+// 简单的图片显示函数 - IMG指令
+// 这里实现一个简单的单色位图显示
+void draw_image(int x, int y, int width, int height, const uint8_t* image_data, int color) {
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            int byte_index = (row * width + col) / 8;
+            int bit_index = 7 - ((row * width + col) % 8);
+            
+            if (image_data[byte_index] & (1 << bit_index)) {
+                draw_pixel(x + col, y + row, color);
+            }
+        }
+    }
+}
+
+/******************************************************************************/
+
 
 

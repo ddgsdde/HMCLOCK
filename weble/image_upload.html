@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电子墨水屏图片上传工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .primary { background-color: #007bff; color: white; }
+        .primary:hover { background-color: #0056b3; }
+        .success { background-color: #28a745; color: white; }
+        .success:hover { background-color: #1e7e34; }
+        .warning { background-color: #ffc107; color: black; }
+        .warning:hover { background-color: #e0a800; }
+        button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+        .info-panel {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+        .preview-area {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .preview-area.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        #preview-canvas {
+            max-width: 100%;
+            max-height: 200px;
+            border: 1px solid #ddd;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <h1>电子墨水屏图片上传工具</h1>
+    
+    <div class="container">
+        <h2>设备连接</h2>
+        <div class="button-group">
+            <button id="connect-button" class="primary">连接设备</button>
+        </div>
+        <div class="info-panel">
+            <div id="device_name">设备名: 未连接</div>
+            <div id="connection_status">连接状态: 未连接</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>图片处理</h2>
+        <div class="preview-area" id="drop-area">
+            <p>拖拽图片到此处或点击选择文件</p>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+            <button onclick="document.getElementById('file-input').click()" class="primary">选择图片</button>
+        </div>
+        
+        <canvas id="preview-canvas" style="display: none;"></canvas>
+        
+        <div class="input-group">
+            <label for="target-width">目标宽度 (像素):</label>
+            <select id="target-width">
+                <option value="212">212 (2.13" B/W)</option>
+                <option value="250">250 (2.13" B/W/R)</option>
+                <option value="296">296 (2.9" B/W/R)</option>
+                <option value="custom">自定义</option>
+            </select>
+        </div>
+        
+        <div class="input-group" id="custom-size" style="display: none;">
+            <label for="custom-width">自定义宽度:</label>
+            <input type="number" id="custom-width" value="212" min="1" max="400">
+            <label for="custom-height">自定义高度:</label>
+            <input type="number" id="custom-height" value="104" min="1" max="300">
+        </div>
+        
+        <div class="button-group">
+            <button id="process-button" class="success" disabled>处理图片</button>
+            <button id="upload-button" class="warning" disabled>上传到设备</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>上传进度</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div id="upload-status">等待上传...</div>
+    </div>
+
+    <div class="container">
+        <h2>使用说明</h2>
+        <ul>
+            <li>支持 JPG、PNG、GIF 等常见图片格式</li>
+            <li>图片会自动转换为单色位图</li>
+            <li>建议使用高对比度的黑白图片</li>
+            <li>图片尺寸会自动调整到屏幕大小</li>
+            <li>上传完成后切换到图片模式查看</li>
+        </ul>
+    </div>
+
+    <div id="status-message"></div>
+
+    <script>
+        let connected = false;
+        let device = null;
+        let longValue = null;
+        let processedImageData = null;
+        let imageWidth = 0;
+        let imageHeight = 0;
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = '';
+            }, 3000);
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('upload-status').textContent = `上传进度: ${percent}%`;
+        }
+
+        // 连接设备
+        document.getElementById('connect-button').addEventListener('click', async () => {
+            if (connected) {
+                disconnect();
+                return;
+            }
+
+            try {
+                console.log('请求设备...');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { namePrefix: "DLG-CLOCK" },
+                        { namePrefix: "CLOCK" },
+                        { namePrefix: "DLG" },
+                        { namePrefix: "HM" },
+                        { namePrefix: "EPD" },
+                        { services: [0xff00] }
+                    ],
+                    optionalServices: [ 0xff00 ]
+                });
+                
+                console.log('device: ', device.name);
+                document.getElementById('device_name').textContent = "设备名: " + device.name;
+                device.ongattserverdisconnected = onDisconnect;
+
+                const server = await device.gatt.connect();
+                console.log('设备已连接!');
+
+                const service = await server.getPrimaryService( 0xff00 );
+                longValue = await service.getCharacteristic( 0xff01 );
+
+                connected = true;
+                document.getElementById('connect-button').textContent = "断开连接";
+                document.getElementById('connection_status').textContent = "连接状态: 已连接";
+                showStatus('设备连接成功!', 'success');
+            } catch (error) {
+                console.log('连接失败:', error);
+                showStatus('连接失败: ' + error.message, 'error');
+                disconnect();
+            }
+        });
+
+        function disconnect() {
+            if(device && device.gatt.connected){
+                device.gatt.disconnect();
+            }
+            onDisconnect();
+        }
+
+        function onDisconnect() {
+            device = null;
+            connected = false;
+            document.getElementById('connect-button').textContent = "连接设备";
+            document.getElementById('device_name').textContent = "设备名: 未连接";
+            document.getElementById('connection_status').textContent = "连接状态: 未连接";
+            showStatus('设备已断开连接', 'info');
+        }
+
+        // 文件处理
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const previewCanvas = document.getElementById('preview-canvas');
+        const ctx = previewCanvas.getContext('2d');
+
+        // 拖拽处理
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // 目标尺寸选择
+        document.getElementById('target-width').addEventListener('change', (e) => {
+            const customSize = document.getElementById('custom-size');
+            if (e.target.value === 'custom') {
+                customSize.style.display = 'block';
+            } else {
+                customSize.style.display = 'none';
+                // 设置预定义尺寸
+                const sizes = {
+                    '212': {w: 212, h: 104},
+                    '250': {w: 250, h: 122},
+                    '296': {w: 296, h: 128}
+                };
+                const size = sizes[e.target.value];
+                if (size) {
+                    document.getElementById('custom-width').value = size.w;
+                    document.getElementById('custom-height').value = size.h;
+                }
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('请选择图片文件', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    previewCanvas.style.display = 'block';
+                    previewCanvas.width = img.width;
+                    previewCanvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    document.getElementById('process-button').disabled = false;
+                    showStatus('图片加载成功', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 处理图片
+        document.getElementById('process-button').addEventListener('click', () => {
+            const targetWidth = document.getElementById('target-width').value === 'custom' 
+                ? parseInt(document.getElementById('custom-width').value)
+                : parseInt(document.getElementById('target-width').value);
+            
+            const targetHeight = document.getElementById('target-width').value === 'custom'
+                ? parseInt(document.getElementById('custom-height').value)
+                : (targetWidth === 212 ? 104 : targetWidth === 250 ? 122 : 128);
+
+            // 创建处理画布
+            const processCanvas = document.createElement('canvas');
+            const processCtx = processCanvas.getContext('2d');
+            processCanvas.width = targetWidth;
+            processCanvas.height = targetHeight;
+
+            // 缩放图片
+            processCtx.drawImage(previewCanvas, 0, 0, targetWidth, targetHeight);
+
+            // 转换为单色位图
+            const imageData = processCtx.getImageData(0, 0, targetWidth, targetHeight);
+            const data = imageData.data;
+            
+            // 转换为黑白
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                const bw = gray > 128 ? 255 : 0;
+                data[i] = data[i + 1] = data[i + 2] = bw;
+            }
+            
+            processCtx.putImageData(imageData, 0, 0);
+
+            // 转换为位图数据
+            const bitmapData = new Uint8Array(Math.ceil(targetWidth * targetHeight / 8));
+            let bitIndex = 0;
+            
+            for (let y = 0; y < targetHeight; y++) {
+                for (let x = 0; x < targetWidth; x++) {
+                    const pixelData = processCtx.getImageData(x, y, 1, 1).data;
+                    const isBlack = pixelData[0] < 128;
+                    
+                    const byteIndex = Math.floor(bitIndex / 8);
+                    const bitPos = 7 - (bitIndex % 8);
+                    
+                    if (isBlack) {
+                        bitmapData[byteIndex] |= (1 << bitPos);
+                    }
+                    
+                    bitIndex++;
+                }
+            }
+
+            processedImageData = bitmapData;
+            imageWidth = targetWidth;
+            imageHeight = targetHeight;
+
+            // 更新预览
+            previewCanvas.width = targetWidth;
+            previewCanvas.height = targetHeight;
+            ctx.putImageData(imageData, 0, 0);
+
+            document.getElementById('upload-button').disabled = false;
+            showStatus(`图片处理完成 (${targetWidth}x${targetHeight})`, 'success');
+        });
+
+        // 上传图片
+        document.getElementById('upload-button').addEventListener('click', async () => {
+            if (!connected || !processedImageData) {
+                showStatus('请先连接设备并处理图片', 'error');
+                return;
+            }
+
+            try {
+                updateProgress(0);
+
+                // 发送图片头信息
+                const header = new Uint8Array([
+                    0xF0,
+                    imageWidth & 0xFF,
+                    (imageWidth >> 8) & 0xFF,
+                    imageHeight & 0xFF,
+                    (imageHeight >> 8) & 0xFF,
+                    processedImageData.length
+                ]);
+                await longValue.writeValue(header);
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // 分块发送图片数据
+                const chunkSize = 18; // 蓝牙MTU限制
+                const totalChunks = Math.ceil(processedImageData.length / chunkSize);
+                
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, processedImageData.length);
+                    const chunk = processedImageData.slice(start, end);
+                    
+                    const packet = new Uint8Array(chunk.length + 1);
+                    packet[0] = 0xF1;
+                    packet.set(chunk, 1);
+                    
+                    await longValue.writeValue(packet);
+                    
+                    const progress = Math.round((i + 1) / totalChunks * 90);
+                    updateProgress(progress);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+
+                // 发送完成信号
+                await longValue.writeValue(new Uint8Array([0xF3]));
+                updateProgress(100);
+
+                showStatus('图片上传成功！请切换到图片模式查看', 'success');
+            } catch (error) {
+                console.error('上传失败:', error);
+                showStatus('上传失败: ' + error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
